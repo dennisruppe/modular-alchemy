@@ -1,7 +1,7 @@
 {
-  "name": "module",
-  "title": "New Module",
-  "description": "",
+  "name": "modular-alchemy",
+  "title": "Modular Alchemy",
+  "description": "Implementing parts of the modular crafting system found in 'City and Wild' by Ignacio Portilla, available at https://www.dmsguild.com/product/226033/City-and-Wild.",
   "version": "This is auto replaced",
   "library": "false",
   "manifestPlusVersion": "1.0.0",
@@ -9,9 +9,8 @@
   "compatibleCoreVersion": "9",
   "authors": [
     {
-      "name": "The League of Extraordinary FVTT Developers",
-      "url": "https://github.com/League-of-Foundry-Developers",
-      "discord": "discordID#0001"
+      "name": "Dennis Ruppe",
+      "url": "https://github.com/dennisruppe"
     }
   ],
   "dependencies": [
@@ -39,6 +38,22 @@
   "url": "This is auto replaced",
   "manifest": "This is auto replaced",
   "download": "This is auto replaced",
+  "packs": [
+    {
+      "name": "crafting-effects",
+      "label": "Crafting Effects",
+      "system": "dnd5e",
+      "path": "./packs/crafting-effects.db",
+      "entity": "JournalEntry"
+    },
+    {
+      "name": "crafting-reagents",
+      "label": "Crafting Reagents",
+      "system": "dnd5e",
+      "path": "./packs/crafting-reagents.db",
+      "entity": "Item"
+    }
+  ],
   "license": "LICENSE",
   "readme": "README.md",
   "media": [
