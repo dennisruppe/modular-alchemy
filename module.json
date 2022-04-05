@@ -52,6 +52,13 @@
       "system": "dnd5e",
       "path": "./packs/crafting-reagents.db",
       "entity": "Item"
+    },
+    {
+      "name": "crafting-active-effects",
+      "label": "Crafting Active Effects",
+      "system": "dnd5e",
+      "path": "./packs/crafting-active-effects.db",
+      "entity": "Item"
     }
   ],
   "license": "LICENSE",
