@@ -13,7 +13,11 @@ class CraftingConfigData {
     }
 
     static getReagentSlotsForUser(userId) {
-        return game.users.get(userId)?.getFlag(ModularAlchemy.ID, ModularAlchemy.FLAGS.REAGENTSLOTS);
+        return game.users.get(userId)?.getFlag(ModularAlchemy.ID, ModularAlchemy.FLAGS.REAGENTSLOTS) ?? {};
+    }
+
+    static getReagentSlot(reagentId) {
+        return this.allReagentSlots[reagentId];
     }
 
     static addReagentSlot(userId, reagentData) {
@@ -45,12 +49,12 @@ class CraftingConfigData {
     }
 
     static deleteReagentSlot(reagentId) {
-        const relevantReagent = this.allReagentSlots[reagentId];
+        const relevantReagent = this.getReagentSlot(reagentId);
         const keyDeletion = {
             [`-=${reagentId}`]: null
         }
 
-        return game.user.get(relevantReagent.userId)?.setFlag(ModularAlchemy.ID, ModularAlchemy.FLAGS.REAGENTSLOTS, keyDeletion);
+        return game.users.get(relevantReagent.userId)?.setFlag(ModularAlchemy.ID, ModularAlchemy.FLAGS.REAGENTSLOTS, keyDeletion);
     }
 
     static deleteAllReagentSlotsForUser(userId) {
@@ -90,6 +94,7 @@ class CraftingConfigData {
                     effects[effectId]['level'] = Math.min(effects[effectId]['level'] + score, maxlevel);
                 } else {
                     effects[effectId] = {
+                        id: effectId,
                         level: Math.min(score, maxlevel),
                         name: effectJournal.getFlag(ModularAlchemy.ID, ModularAlchemy.FLAGS.EFFECTNAME),
                         type: effectJournal.getFlag(ModularAlchemy.ID, ModularAlchemy.FLAGS.EFFECTTYPE)
@@ -181,8 +186,19 @@ class CraftingConfigData {
         return map[level];
     }
 
+    static tableToJson(table) { 
+        var parser = new DOMParser();
+        var doc    = parser.parseFromString(table, "text/html");
+        var obj    = [].map.call(doc.querySelectorAll('tr'), tr => {
+            return [].slice.call(tr.querySelectorAll('td')).reduce( (a,b,i) => {
+                return a['col' + (i+1)] = b.textContent, a;
+            }, {});
+        });
+
+        return obj
+    }
+
     static async createNewItem(type, effects) {
-        ModularAlchemy.log(false, "Crafting:", type, effects);
 
         const highestLevel = Math.max(...effects.map(x => x.level));
 
@@ -190,6 +206,7 @@ class CraftingConfigData {
 
         switch (type) {
             case 'Bomb':
+                typeSpecificData['img'] = 'icons/weapons/thrown/bomb-fuse-black-grey.webp';
                 typeSpecificData['data']['ability'] = 'dex';
                 typeSpecificData['data']['actionType'] = 'save';
                 typeSpecificData['data']['range'] = {value: 30, units: 'ft'};
@@ -199,6 +216,7 @@ class CraftingConfigData {
                 typeSpecificData['data']['damage'] = {parts: bombDamages};
                 break;
             case 'Poison':
+                typeSpecificData['img'] = 'icons/consumables/potions/potion-bottle-skull-label-poison-teal.webp';
                 typeSpecificData['data']['ability'] = 'con';
                 typeSpecificData['data']['actionType'] = 'save';
                 typeSpecificData['data']['save'] = {ability: 'con', dc: this.getDCForEffectLevel(highestLevel), scaling: 'flat'};
@@ -207,6 +225,7 @@ class CraftingConfigData {
                 typeSpecificData['data']['damage'] = {parts: poisonDamages};
                 break;
             case 'Potion':
+                typeSpecificData['img'] = 'icons/consumables/potions/potion-bottle-corked-fancy-blue.webp';
                 typeSpecificData['data']['actionType'] = 'heal';
                 typeSpecificData['data']['duration'] = this.getDurationForEffectLevel(highestLevel);
                 const potionHealing = effects.filter(x => x.name.startsWith('Healing')).map(x => [this.getPotionHealingForEffectLevel(x.level), 'healing']);
@@ -216,10 +235,44 @@ class CraftingConfigData {
                 break;
         }
 
+        // Adding description, cut and paste from tables in journals
+        const effectsPreview = []; // [{Name: "test", Level: 1, Type: type, Effect: "test"}]
+        effects.forEach(async (effect) => {
+            const effectJournal = await game.packs.get(ModularAlchemy.SOURCE_EFFECTS).getDocument(effect.id);
+            const content = this.tableToJson(effectJournal.data.content);
+            content.slice(1)
+            .filter( row => row.col2 == effect.level.toString())
+            .map(row => ({
+                Name: row.col1,
+                Effect: row.col4
+            }))
+            .forEach( row => {
+                effectsPreview.push(row);
+            })
+        })
+
+        // Set up data for template
+        const descriptionData = {
+            level: highestLevel, 
+            isBomb: type==='Bomb', 
+            isPoison: type==='Poison', 
+            isPotion: type==='Potion', 
+            type: type, 
+            dc: typeSpecificData['data']['save']?.['dc'], 
+            radius: typeSpecificData['data']['target']?.['value'],
+            duration: typeSpecificData['data']['duration'],
+            effectsPreview: effectsPreview
+        };
+        if (descriptionData.duration?.value > 1) {
+            descriptionData.duration.units += 's'
+        }
+        const htmlDescription = await renderTemplate(ModularAlchemy.TEMPLATES.CRAFTEDITEMDESCRIPTION, descriptionData);
+
         const data = {
             name: `Modular ${type}: [${effects.map(x=>x.name+' '+this.romanNumeral(x.level)).join(', ')}]`,
             type: 'consumable',
             data: {
+                description: {value: htmlDescription},
                 consumableType: this.consumableTypeMapping(type),
                 activation: {cost: 1, type: 'action'},
                 uses: {value: 1, max: 1, autodestroy: false}
@@ -230,6 +283,51 @@ class CraftingConfigData {
         const craftedItem = await Item.create(mergedData);
 
         // update with active effects: 
+        const allEffectData = [];
+        const effectsPack = await game.packs.get(ModularAlchemy.SOURCE_ACTIVE_EFFECTS);
+        await effectsPack.getIndex();
+        for (const effect of effects) {
+            const effectNames = effect.name.split(/[()]/);
+            const effectGroup = effectNames[0]?.trim();
+            const effectSubtype = effectNames[1]?.trim();
+            const effectIndex = effectsPack.index.find(item => item.name.includes(effectGroup));
+            if (effectIndex) {
+                const effectItem = await effectsPack.getDocument(effectIndex._id);
+                const foundActiveEffect = effectItem.data.effects.find(ae => (ae.data.label.endsWith(this.romanNumeral(effect.level))));
+                if (foundActiveEffect) {
+                    let effectData = foundActiveEffect.toObject();
+                    effectData.origin = `Item.${craftedItem.data._id}`
+                    // Got the right level, modify with subtype if necessary
+                    // Update duration based on overall level
+                    effectData.duration.seconds = typeSpecificData['data']['duration']?.value * (typeSpecificData['data']['duration']?.units === 'minute' ? 60 : 3600);
+                    effectData.duration.rounds = effectData.duration.seconds / 6;
+
+                    // Includes Condition, Fortify, Resistance, Vulnerability, and Weakness
+                    if (effectSubtype) {
+                        effectData.label = effect.name + ' ' + this.romanNumeral(effect.level);
+                        
+                        if (effectGroup === 'Condition') {
+                            effectData.changes.forEach(change => {
+                                change.value = `Convenient Effect: ${effectSubtype}`;
+                            })
+                        } else if (effectGroup === 'Vulnerability' || effectGroup === 'Resistance') {
+                            effectData.changes.forEach(change => {
+                                change.key = change.key.replaceAll('acid', effectSubtype.toLowerCase());
+                                change.value = change.value.replaceAll('acid', effectSubtype.toLowerCase());
+                            })
+                        } else if (effectGroup === 'Fortify' || effectGroup === 'Weakness') {
+                            effectData.changes.forEach(change => {
+                                change.key = change.key.replaceAll(/\.cha(\.|$)/g, `.${effectSubtype.toLowerCase().slice(0, 3)}$1`);
+                            })
+                        }
+                    }
+                    
+                    allEffectData.push(effectData);
+                }
+            }            
+        }
+
+        await craftedItem.createEmbeddedDocuments('ActiveEffect', allEffectData);
 
         return craftedItem;
     }
@@ -241,6 +339,7 @@ class CraftingConfig extends FormApplication {
 
         const overrides = {
             height: 'auto',
+            width: '500px',
             id: 'crafting-config',
             template: ModularAlchemy.TEMPLATES.CRAFTINGCONFIG,
             title: 'Crafting Config',
@@ -256,17 +355,20 @@ class CraftingConfig extends FormApplication {
     }
 
     async _onDrop(event) {
-        ModularAlchemy.log(false, "Drop event", event)
         const data = TextEditor.getDragEventData(event);
         const item = await Item.implementation.fromDropData(data);
         const itemData = item.toObject();
         const droppedElement = $(event.target);
         const reagentId = droppedElement.parents('[data-reagent-id]')?.data()?.reagentId;
-        if (reagentId === '')
-        {
-            await CraftingConfigData.addReagentSlot(this.options.userId, itemData);
+        if (item.getFlag(ModularAlchemy.ID, ModularAlchemy.FLAGS.ITEMISREAGENT)) {
+            if (reagentId === '')
+            {
+                await CraftingConfigData.addReagentSlot(this.options.userId, itemData);
+            } else {
+                await CraftingConfigData.updateReagentSlot(reagentId, itemData);
+            }
         } else {
-            await CraftingConfigData.updateReagentSlot(reagentId, itemData);
+            ui.notifications.warn(`${item.name} is not a valid reagent.`);
         }
         this.render();
     }
@@ -275,38 +377,53 @@ class CraftingConfig extends FormApplication {
         super.activateListeners(html);
 
         html.on('click', "[data-action]", this._handleButtonClick.bind(this));        
+        html.on('mousedown', ".crafting-config-reagent-slot", this._handleReagentSlotClick.bind(this));
+        html.on('click', ".table-row-effect", this._handleEffectRowClick.bind(this));
+    }
+
+    async _handleReagentSlotClick(event) {
+        const clickedElement = $(event.currentTarget);
+        const reagentId = clickedElement.data().reagentId;
+        switch (event.which) {
+            case 1:
+                // left-click: view item details
+                const tempItem = await Item.create(CraftingConfigData.getReagentSlot(reagentId), {temporary: true});
+                tempItem.sheet?.render(true);
+                break;
+            case 3:
+                // right-click: delete
+                await CraftingConfigData.deleteReagentSlot(reagentId);
+                this.render();
+                break;
+            default:
+                break;
+        }
+        
+    }
+
+    async _handleEffectRowClick(event) {
+        const clickedElement = $(event.currentTarget);
+        const effectId = clickedElement.data()?.effectId;
+        const effectJournal = await game.packs.get(ModularAlchemy.SOURCE_EFFECTS).getDocument(effectId);
+        effectJournal.sheet.render(true);
     }
 
     async _handleButtonClick(event) {
         const clickedElement = $(event.currentTarget);
         const action = clickedElement.data().action;
-        const reagentId = clickedElement.parents('[data-reagent-id]')?.data()?.reagentId;
-
-        switch (action) {
+        const actions = action.split(" ");
+        switch (actions[0]) {
             case 'clear': {
                 await CraftingConfigData.deleteAllReagentSlotsForUser(this.options.userId);
                 this.render();
                 break;
             }
-            case 'craft Bomb': {
+            case 'craft': {
                 const effects = await CraftingConfigData.getEffectsForReagents(this.options.userId);
-                const relEffects = effects['Bomb'];
-                await CraftingConfigData.createNewItem('Bomb', relEffects);
+                const relEffects = effects[actions[1]];
+                const newItem = await CraftingConfigData.createNewItem(actions[1], relEffects);
                 this.render();
-                break;
-            }
-            case 'craft Poison': {
-                const effects = await CraftingConfigData.getEffectsForReagents(this.options.userId);
-                const relEffects = effects['Poison'];
-                await CraftingConfigData.createNewItem('Poison', relEffects);
-                this.render();
-                break;
-            }
-            case 'craft Potion': {
-                const effects = await CraftingConfigData.getEffectsForReagents(this.options.userId);
-                const relEffects = effects['Potion'];
-                await CraftingConfigData.createNewItem('Potion', relEffects);
-                this.render();
+                ui.notifications.info(`${ModularAlchemy.ID}: New ${actions[1]} crafted: ${newItem.name}!`);
                 break;
             }
             default:
@@ -335,8 +452,10 @@ class ModularAlchemy {
     static ID = 'modular-alchemy';
     static SOURCE_REAGENTS = 'modular-alchemy.crafting-reagents';
     static SOURCE_EFFECTS = 'modular-alchemy.crafting-effects';
+    static SOURCE_ACTIVE_EFFECTS = 'modular-alchemy.crafting-active-effects';
     static TEMPLATES = {
-        CRAFTINGCONFIG: `modules/${this.ID}/templates/crafting-config.hbs`
+        CRAFTINGCONFIG: `modules/${this.ID}/templates/crafting-config.hbs`,
+        CRAFTEDITEMDESCRIPTION: `modules/${this.ID}/templates/crafted-item-description.hbs`
     }
     static FLAGS = {
         REAGENTSLOTS: 'reagent-slots',

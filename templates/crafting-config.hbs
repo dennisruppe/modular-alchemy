@@ -2,7 +2,7 @@
     <section style="border: 2px solid">
         <ul class="crafting-config flexrow">
             {{#each reagentslots}}
-                <li class="flexcol crafting-config-reagent-slot" data-reagent-id="{{id}}">
+                <li class="flexcol crafting-config-reagent-slot hover-show-clickable" data-reagent-id="{{id}}">
                     <img src="{{img}}" title="{{name}}" width="100px"/>
                     {{name}}
                 </li>
@@ -25,7 +25,7 @@
                 </thead>
                 <tbody>
                     {{#each this}}
-                        <tr>
+                        <tr class="table-row-effect hover-show-clickable" data-effect-id="{{this.id}}">
                             <td>{{this.name}} {{this.level}}</td>
                         </tr>
                     {{/each}}
