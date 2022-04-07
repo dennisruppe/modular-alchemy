@@ -1,0 +1,41 @@
+<form>
+    <section style="border: 2px solid">
+        <ul class="crafting-config-slots flexrow">
+            {{#each reagentslots}}
+                <li class="flexcol crafting-config-reagent-slot hover-show-clickable" data-reagent-id="{{id}}">
+                    <img src="{{img}}" title="{{name}}" width="100px"/>
+                    {{name}}
+                </li>
+            {{/each}}
+            {{#if notSlotsFull}}
+            <li class="flexcol crafting-config-reagent-slot" data-reagent-id="">
+                <img src="modules/modular-alchemy/images/openslot.png" title="Drop an item here to add to recipe" width="100px"/>
+            </li>
+            {{/if}}
+        </ul>
+    <div><button type="button" data-action="clear"><i class="fas fa-broom"></i></button></div>
+    </section>
+    <section style="border: 2px solid" class="crafting-config-effect-preview flexrow">
+        {{#each effectsPreview}}
+            <table class="flexcol">
+                <thead>
+                    <tr>
+                        <th>{{@key}} Effect</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each this}}
+                        <tr class="table-row-effect hover-show-clickable" data-effect-id="{{this.id}}">
+                            <td>{{this.name}} {{this.level}}</td>
+                        </tr>
+                    {{/each}}
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td><button type="button" data-action="craft {{@key}}">Craft {{@key}}</button></td>
+                    </tr>
+                </tfoot>
+            </table>
+        {{/each}}
+    </section>
+</form>

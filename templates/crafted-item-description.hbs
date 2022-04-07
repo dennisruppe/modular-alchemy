@@ -1,0 +1,49 @@
+This is a level {{level}} concoction.
+{{#if isBomb}}
+<p>
+    This category includes any thrown mixture which can damage or cause other dangerous effects on an area. As an action, a character can throw a bomb up to 30 feet to a location it can see. The mixture shatters when it reach the location, releasing its content, and any creature within the area of explosion must make a Dexterity saving throw or take damage. A successful save reduces the damage in half.
+</p>
+<p>
+    The concoction level determines the save DC and the area of explosion of the bomb. As a level {{level}} bomb, the Dexterity Save DC is {{dc}} and the area of explosion is a {{radius}}-foot radius.
+</p>
+{{/if}}
+{{#if isPoison}}
+<p>
+    When creating a poison, the character must choose the poison type, which can be contact, ingested, inhaled or injury. You can read more about the poison types in the <i>Dungeon Master's Guide</i>.
+</p>
+<p>
+    The concoction level determines the Constitution save DC a creature must make to try to resist the poison and the duration of the effects. As a level {{level}} poison, the Constitution Save DC is {{dc}} and the duration is {{duration.value}} {{duration.units}}.
+</p>
+<p>
+    If the creature fails the check, it is considered poisoned for the duration of the poison. Then, any other effects the concoction have occurs. The poisoned condition last for the duration of the poison. If the poison imposes any other effect or condition, the creature can repeat the saving throw at the end of each of its turns, ending any additional effects on itself on a success.
+</p>
+{{/if}}
+{{#if isPotion}}
+<p>
+    Potions are mixtures created to give benefits to anyone who drinks it. The effect depends on the potion used. As an action, a character can drink a potion or administer it to another character.
+</p>
+<p>
+    The concoction level determines the duration of the effects. As a level {{level}} potion, the duration is {{duration.value}} {{duration.units}}.
+</p>
+<p>
+    A creature can only be under the effects of one potion that has a duration, and drinking a new potion will replace the previous effect.
+</p>
+{{/if}}
+<table>
+    <thead>
+        <tr>
+            {{#each effectsPreview.[0]}}
+                <th>{{@ key}}</th>
+            {{/each}}
+        </tr>
+    </thead>
+    <tbody>
+        {{#each effectsPreview}}
+            <tr>
+                {{#each this}}
+                    <td>{{this}}</td>
+                {{/each}}
+            </tr>
+        {{/each}}
+    </tbody>
+</table>
