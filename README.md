@@ -17,16 +17,25 @@ New crafted item is created at the world level, complete with a table in the des
 ![Sample items.](/docs/sampleitems.jpg)
 
 ## Dependencies
+
 -Requires DnD5e system.
+
 -No other modules are required.
+
 -Active effects are configured to use flags from [Active Token Effects](https://github.com/kandashi/Active-Token-Lighting), [DFreds Convenient Effects](https://github.com/DFreds/dfreds-convenient-effects), and [Midi QOL](https://gitlab.com/tposney/midi-qol). Nothing breaks if you don't have these modules installed, but some of the effects won't function.
 
 ## Known Issues
+
 -Effects from the source not implemented with active effects:
+
     -Fog
+
     -Slipperiness
+
     -Intensify
+
     -Water Breathing
+
 -No way to create new reagents and effects as a user.
 
 ## Changelog
