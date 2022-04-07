@@ -1,3 +1,7 @@
 .hover-show-clickable:hover{
     cursor: pointer;
 }
+
+.crafting-config-slots {
+    width: 500px;
+}

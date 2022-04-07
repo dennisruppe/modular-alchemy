@@ -275,7 +275,7 @@ class CraftingConfigData {
                 description: {value: htmlDescription},
                 consumableType: this.consumableTypeMapping(type),
                 activation: {cost: 1, type: 'action'},
-                uses: {value: 1, max: 1, autodestroy: false}
+                uses: {value: 1, max: 1, per: 'charges', autodestroy: false}
             }
         };
 
@@ -339,7 +339,6 @@ class CraftingConfig extends FormApplication {
 
         const overrides = {
             height: 'auto',
-            width: '500px',
             id: 'crafting-config',
             template: ModularAlchemy.TEMPLATES.CRAFTINGCONFIG,
             title: 'Crafting Config',
