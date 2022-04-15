@@ -494,25 +494,28 @@ Hooks.once('ready', async function() {
 
 
 /**
- * Render a button on the Player List
+ * Render a button on the Items tab
  */
- Hooks.on('renderPlayerList', (playerList, html) => {
+ Hooks.on('renderSidebarTab', (app, html) => {
     
     // find the element which has our logged in user's id
-    const loggedInUserListItem = html.find(`[data-user-id="${game.userId}"]`)
+    if (app.tabName === "items") {
+        
     
-    // create localized tooltip
-    const tooltip = game.i18n.localize('MODULAR-ALCHEMY.button-title');
+        const itemDirectoryActionBar = html.find(`.header-actions`);
+        // create localized tooltip
+        const tooltip = game.i18n.localize('MODULAR-ALCHEMY.button-title');
 
-    // insert a button at the end of this element
-    loggedInUserListItem.append(
-    `<button type='button' class='modular-alchemy-icon-button flex0' title='${tooltip}'><i class='far fa-lightbulb'></i></button>`
-    );
+        // insert a button at the end of this element
+        itemDirectoryActionBar.append(
+        `<button class='modular-alchemy-icon-button' title='${tooltip}'><i class='far fa-lightbulb' ::before</i> Craft Item</button>`
+        );
 
-    html.on('click', '.modular-alchemy-icon-button', (event) => {
-        const userId = $(event.currentTarget).parents('[data-user-id]')?.data()?.userId;
-        ModularAlchemy.CraftingConfig.render(true, {userId});
-    });
+        html.on('click', '.modular-alchemy-icon-button', (event) => {
+            const userId = game.userId;
+            ModularAlchemy.CraftingConfig.render(true, {userId});
+        });
+    }
 });
 
 
